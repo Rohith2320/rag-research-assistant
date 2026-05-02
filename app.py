@@ -365,15 +365,19 @@ with st.sidebar:
         # Only reprocess if new files are uploaded
         if file_names != st.session_state.paper_names:
             with st.spinner("Reading and processing your papers..."):
-                vectorstore, num_chunks, paper_info, bm25_index, bm25_chunks = process_pdfs(uploaded_files)
-                st.session_state.vectorstore = vectorstore
-                st.session_state.paper_names = file_names
-                st.session_state.paper_info = paper_info
-                st.session_state.bm25_index = bm25_index
-                st.session_state.bm25_chunks = bm25_chunks
-                st.session_state.messages = []
-                st.success(f"Processed {len(uploaded_files)} paper(s) into {num_chunks} chunks.")
-
+                try:
+                
+                    vectorstore, num_chunks, paper_info, bm25_index, bm25_chunks = process_pdfs(uploaded_files)
+                    st.session_state.vectorstore = vectorstore
+                    st.session_state.paper_names = file_names
+                    st.session_state.paper_info = paper_info
+                    st.session_state.bm25_index = bm25_index
+                    st.session_state.bm25_chunks = bm25_chunks
+                    st.session_state.messages = []
+                    st.success(f"Processed {len(uploaded_files)} paper(s) into {num_chunks} chunks.")
+                except Exception as e:
+                    st.error(f"Failed to process papers: {str(e)}")
+                    st.info("Make sure yoyr files are valid PDFs and OpenAI API key has credits.")
     if st.session_state.paper_names:
         st.divider()
         st.subheader("Loaded Papers")
@@ -411,10 +415,23 @@ if st.session_state.vectorstore:
         # Generate and show answer
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
-             answer, sources, scope = ask_question(st.session_state.vectorstore, question, st.session_state.paper_names, chat_history=st.session_state.messages)            
-            st.write(answer)
-            st.caption(f"📎 Sources: {', '.join(sources)}")
-            st.caption(f"🔍 {scope}")
+                try:
+                    answer, sources, scope = ask_question(
+                        st.session_state.vectorstore,
+                        question,
+                        st.session_state.paper_names,
+                        chat_history=st.session_state.messages
+                    )
+                    st.write(answer)
+                    st.caption(f"📎 Sources: {', '.join(sources)}")
+                    st.caption(f"🔍 {scope}")
+                except Exception as e:
+                    answer = f"Sorry, I encountered an error: {str(e)}"
+                    sources = []
+                    scope = ""
+                    st.error(answer)
+                    st.info("This may be due to API rate limits. Please try again.")
+
         st.session_state.messages.append({
             "role": "assistant",
             "content": answer,
@@ -423,15 +440,35 @@ if st.session_state.vectorstore:
         })
 
 else:
-    # Landing page when no papers are uploaded
-    st.markdown("### Welcome! 👋")
-    st.markdown("Upload one or more research papers in the sidebar to get started.")
+    st.markdown("### Welcome to Research Paper QA Bot 👋")
+    st.markdown("Upload one or more academic research papers in the sidebar to get started.")
+
+    st.divider()
+
+    st.markdown("**How it works:**")
+    st.markdown("""
+1. Upload PDFs using the sidebar (research papers, reports, or any academic documents)
+2. Wait ~20-30 seconds for processing
+3. Ask questions in plain English
+4. Get cited answers with page references
+    """)
+
+    st.divider()
 
     st.markdown("**Example questions you can ask:**")
-    st.markdown("""
-- What is the main research question of this paper?
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("""
 - What methodology did the authors use?
 - What were the key findings?
-- What limitations did the authors mention?
-- How does this relate to [specific topic]?
-    """)
+- What limitations did they mention?
+        """)
+    with col2:
+        st.markdown("""
+- Compare the approaches across papers
+- What countermeasures do they suggest?
+- Which specific apps were analyzed?
+        """)
+
+    st.divider()
+    st.caption("Built with LangChain · ChromaDB · OpenAI · Streamlit")
