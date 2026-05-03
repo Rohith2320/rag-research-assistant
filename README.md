@@ -1,3 +1,12 @@
+---
+title: Rag Research Assistant
+emoji: 🔬
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+pinned: false
+---
+
 <div align="center">
 
 # 🔬 Research Paper QA Bot
