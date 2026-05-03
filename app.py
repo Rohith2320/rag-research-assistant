@@ -9,7 +9,7 @@ from rank_bm25 import BM25Okapi
 import re
 import os
 import tempfile
-load_dotenv()
+load_dotenv(override=False)
 reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 # --- Page Config ---
