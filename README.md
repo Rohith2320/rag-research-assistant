@@ -22,7 +22,7 @@ pinned: false
 
 <br/>
 
-> **Live Demo** → *Coming soon (Hugging Face Spaces)*
+> > **Live Demo:** [🚀 Try it on Hugging Face Spaces](https://huggingface.co/spaces/Rohith2320/rag-research-assistant)
 
 <br/>
 
