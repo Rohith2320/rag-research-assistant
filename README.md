@@ -32,11 +32,12 @@ pinned: false
 
 ---
 
-## The Problem
+## Why I Built This
 
-Reading 10 research papers to find a specific finding takes hours. Basic RAG systems help — but they fail on questions that require comparing across papers, understanding follow-up context, or finding exact technical details like file paths, version numbers, and numeric results.
+I was learning RAG and needed a real use case, not another chatbot demo. I was working on a research project at GMU analyzing 40+ papers on dating app privacy, and manually searching through them for specific findings was taking hours.
 
-**This project solves that** with a production-grade, multi-stage retrieval pipeline that outperforms standard RAG on cross-paper synthesis and specific factual queries.
+So I built this. What started as a learning project became something I kept pushing further. Basic RAG failed on cross-paper comparisons, follow-up questions, and specific technical details like exact file paths or version numbers. Each failure led to a new upgrade. By the end, the system hit 93.75% accuracy on a custom 16-question evaluation suite, handles multi-turn conversations, and is live for anyone to use right now.
+This is that system.
 
 ---
 
@@ -103,7 +104,7 @@ Most RAG tutorials use a single vector search. This system uses **five layered r
 ┌─────────────────────────────────────────────────────────┐
 │           Cross-encoder Re-ranking                       │
 │   ms-marco-MiniLM reads (question, chunk) together       │
-│   Scores relevance — not just similarity                 │
+│   Scores relevance - not just similarity                 │
 │   Reduces 20 candidates → top 5-8                        │
 └───────────────────────────┬─────────────────────────────┘
                             │
@@ -124,7 +125,7 @@ Most RAG tutorials use a single vector search. This system uses **five layered r
 
 ## Evaluation Results
 
-Evaluated against a custom 16-question test suite with ground-truth answers across four difficulty levels. Questions range from single-paper factual lookups to multi-paper reasoning tasks.
+I built a custom 16-question test suite with ground-truth answers spanning four difficulty levels, from single-paper factual lookups to multi-paper reasoning tasks. Running it revealed something interesting: the very hard questions outperformed the hard ones. Two of the hard category failures turned out to be evaluation design bugs, not system failures. One keyword mismatch ("triangulation" vs "trilateration"), one answer that contained the right information but missed the exact keyword. The one genuine system failure was the abstract chunk ranking higher than the experiments section for a specific app names query.
 
 <div align="center">
 
@@ -236,10 +237,12 @@ rag-research-assistant/
 │
 ├── eval.py                  # Automated 16-question evaluation suite
 │
-├── 01_load_and_chunk.py     # Learning: PDF loading and chunking
-├── 02_embed_and_store.py    # Learning: Embeddings and vector storage
-├── 03_query.py              # Learning: Basic RAG query pipeline
+├── 01_load_and_chunk.py     # Pipeline step 1: PDF loading and chunking
+├── 02_embed_and_store.py    # Pipeline step 2: Embeddings and vector storage
+├── 03_query.py              # Pipeline step 3: Basic RAG query pipeline
 │
+├── Dockerfile               # Container config for Hugging Face deployment
+├── .streamlit/config.toml   # Streamlit server configuration
 ├── .env                     # API keys (not committed)
 ├── .gitignore
 └── README.md
@@ -250,10 +253,10 @@ rag-research-assistant/
 ## Known Limitations & Future Work
 
 **Current limitations:**
-- PDF tables are not extracted accurately — structured data in tables may be missed
-- In-memory vector store resets on restart (tradeoff to avoid file locking on Windows)
-- Architecture scales to ~10-15 papers; 30+ papers requires paper-level summary indexing
-- Keyword-based evaluation is a proxy — LLM-as-judge scoring would be more precise
+- PDF tables don't extract cleanly. Data stored in tables (like vulnerability comparison tables in the Kim paper) gets missed or garbled by PyPDF. PyMuPDF would handle this better.
+- The vector store resets on every restart. Deliberate tradeoff to avoid a Windows file locking issue where ChromaDB held database files open and crashed when reprocessing papers.
+- Architecture starts degrading around 15 papers. Per-paper retrieval gets slow and routing becomes less reliable as topics overlap. Scaling to 30+ papers requires a paper-level summary index as a first retrieval stage.
+- Evaluation uses keyword matching as a proxy for correctness. Two questions were marked wrong due to keyword mismatches, not actual system failures. RAGAS or LLM-as-judge scoring would be more precise.
 
 **Planned improvements:**
 - [ ] PyMuPDF integration for accurate table extraction
@@ -261,24 +264,29 @@ rag-research-assistant/
 - [ ] Paper-level summary index for 30+ paper collections
 - [ ] LLM-as-judge evaluation using RAGAS framework
 - [ ] Fine-tuned domain-specific embedding model
+- [ ] Multi-document iterative retrieval for cross-paper inventory questions
+
 
 ---
 
 ## What I Learned
 
-Building this project taught me the practical gap between "RAG tutorial" and "production RAG system":
+The biggest gap between a RAG tutorial and a real system is that tutorials stop at the point where things start getting hard.
 
-- **Chunking strategy** matters as much as the model — fixed-size chunking vs. semantic chunking produces measurably different retrieval quality
-- **Retrieval failures and generation failures** are distinct failure modes requiring different fixes
-- **Hybrid search** consistently outperforms pure vector search on domain-specific technical content
-- **Evaluation design** is as hard as system design — keyword matching revealed its own failure modes
+**Chunking strategy matters as much as the model.** Started with 500-character chunks, retrieval quality was visibly worse. Moving to 1000 with overlap and switching to RecursiveCharacterTextSplitter improved results before touching any retrieval logic.
+
+**Retrieval failures and generation failures need different fixes.** When the system gave a wrong answer, the instinct was to blame the LLM. Half the time it was the wrong chunks being retrieved upstream. Distinguishing the two made debugging dramatically faster.
+
+**Hybrid search is worth the complexity.** Adding BM25 alongside vector search specifically helped with exact technical strings like file paths, version numbers, and field names that semantic search consistently missed.
+
+**Evaluation design is its own engineering problem.** Two test questions failed due to keyword mismatches in my own evaluation suite, not system failures. Building the eval revealed as much about the system as building the system did.
 
 ---
 
 ## Author
 
 **Rohith Reddy Kar**
-MS in Applied Information Technology (Machine Learning) — George Mason University
+MS in Applied Information Technology (Machine Learning) - George Mason University
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat&logo=linkedin)](https://linkedin.com/in/rohith-reddy-kar-76536226a)
 [![GitHub](https://img.shields.io/badge/GitHub-Follow-181717?style=flat&logo=github)](https://github.com/Rohith2320)
